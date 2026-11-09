@@ -4,147 +4,273 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DejaVu</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%23c297ff'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='2' y='2' width='12' height='12' rx='3' fill='%23e8a54b'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
+  /* Direction: calm, exact, accountable. The 2 AM night shift and the incident logbook.
+     Graphite neutrals, one amber "lamp" accent for what memory recognizes.
+     Moment: the track-record strip. Signature: incident ids as case tags. */
   :root {
-    --bg: #0d1117; --panel: #151b23; --panel2: #1b222c; --line: #2a3340; --text: #e6edf3;
-    --muted: #8b98a8; --accent: #7c9cff; --ok: #3fb950; --bad: #f85149; --warn: #d29922; --deja: #c297ff;
-    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --bg: #141415; --deep: #0f0f10; --card: #19191b; --raised: #232325;
+    --line: rgba(237, 237, 237, 0.08); --line-strong: rgba(237, 237, 237, 0.14);
+    --text: #ededed; --text-2: #a1a1a6; --muted: #85858b;
+    --accent: #e8a54b; --accent-ink: #1a1307; --accent-soft: rgba(232, 165, 75, 0.12);
+    --pos: #4cc38a; --neg: #e5484d;
+    --sans: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  header { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 2; }
-  header h1 { margin: 0; font-size: 18px; letter-spacing: .3px; }
-  header .tag { color: var(--muted); font-size: 13px; }
+  html { color-scheme: dark; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 400 14px/20px var(--sans); -webkit-font-smoothing: antialiased; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  svg.i { width: 16px; height: 16px; flex: none; stroke: currentColor; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Header */
+  header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 16px; height: 56px; padding: 0 32px; background: var(--deep); border-bottom: 1px solid var(--line); }
+  .brand { font-size: 16px; font-weight: 500; letter-spacing: 0; }
+  .tagline { color: var(--muted); font-size: 13px; }
   .spacer { flex: 1; }
-  .chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
-  .chip.on { color: var(--ok); border-color: #2a5d36; }
-  .chip.off { color: var(--warn); border-color: #5d4a1a; }
-  main { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr); gap: 16px; padding: 16px 20px; max-width: 1400px; margin: 0 auto; }
-  @media (max-width: 900px) { main { grid-template-columns: 1fr; padding: 12px 16px; } }
-  section.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
-  section.card h2 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); font-weight: 600; }
-  button { font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line); border-radius: 7px; padding: 6px 12px; cursor: pointer; }
-  button:hover { border-color: var(--accent); }
-  button:disabled { opacity: .5; cursor: default; }
-  button.primary { background: #23315a; border-color: #34488a; }
-  button.ok { color: var(--ok); } button.bad { color: var(--bad); }
-  button.sm { padding: 2px 9px; font-size: 12px; }
-  .triggers { display: flex; flex-wrap: wrap; gap: 8px; }
-  .toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
-  .toggle input { display: none; }
-  .toggle .track { width: 40px; height: 22px; border-radius: 999px; background: #3a2a2a; position: relative; transition: .15s; border: 1px solid var(--line); }
-  .toggle .track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--text); transition: .15s; }
-  .toggle input:checked + .track { background: #23402b; }
-  .toggle input:checked + .track::after { left: 20px; }
-  #warnings:empty { display: none; }
-  #warnings { grid-column: 1 / -1; }
-  .warning { background: #2b2210; border: 1px solid #5d4a1a; color: #f0c674; padding: 8px 12px; border-radius: 8px; margin-bottom: 6px; font-size: 13px; }
-  .empty { color: var(--muted); }
-  .inc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; }
-  .inc-head .title { font-size: 17px; font-weight: 600; }
-  .sev { font-family: var(--mono); font-size: 12px; padding: 1px 6px; border-radius: 4px; background: #3a1d1d; color: #ff9b94; }
-  .badge { font-weight: 700; font-size: 12px; padding: 3px 10px; border-radius: 999px; }
-  .badge.deja { background: #2c1f45; color: var(--deja); border: 1px solid #5b3d91; animation: pulse 1.6s ease-out 2; }
-  .badge.none { background: var(--panel2); color: var(--muted); border: 1px solid var(--line); }
-  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(194,151,255,.6); } 100% { box-shadow: 0 0 0 12px rgba(194,151,255,0); } }
-  .mono { font-family: var(--mono); font-size: 12.5px; }
-  .signal { background: #0b0f14; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; color: #c9d1d9; overflow-wrap: anywhere; }
-  .meta { color: var(--muted); font-size: 12.5px; margin: 6px 0 0; }
-  .narrative { margin: 12px 0; padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--panel2); border-radius: 0 6px 6px 0; }
-  .narrative small { display: block; color: var(--muted); margin-top: 4px; }
-  h3 { font-size: 13px; margin: 14px 0 6px; }
-  h3.do { color: var(--ok); } h3.avoid { color: var(--bad); }
-  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--line); }
-  .row:first-of-type { border-top: none; }
-  .row .name { font-weight: 600; }
-  .row .stat { font-family: var(--mono); font-size: 12px; color: var(--muted); }
-  .row .ids { font-family: var(--mono); font-size: 12px; color: var(--accent); }
-  .row .btns { margin-left: auto; display: flex; gap: 6px; }
-  .verdict { font-size: 12px; font-weight: 600; }
-  .verdict.w { color: var(--ok); } .verdict.f { color: var(--bad); }
-  input[type=text], textarea { font: inherit; color: var(--text); background: #0b0f14; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100%; }
-  textarea { font-family: var(--mono); font-size: 12.5px; resize: vertical; }
-  .inline { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
+  .status { display: flex; align-items: center; gap: 16px; color: var(--muted); font: 400 12px/16px var(--mono); }
+  .status span { display: inline-flex; align-items: center; gap: 8px; }
+  .dot { width: 6px; height: 6px; border-radius: 3px; background: var(--muted); flex: none; }
+  .dot.live { background: var(--pos); }
+  .dot.lamp { background: var(--accent); }
+  .toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; -webkit-user-select: none; color: var(--text-2); }
+  .toggle input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .track { width: 32px; height: 18px; border-radius: 9px; background: var(--raised); border: 1px solid var(--line-strong); position: relative; transition: background-color 160ms var(--ease), border-color 160ms var(--ease); }
+  .track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 6px; background: var(--text-2); transition: transform 160ms var(--ease), background-color 160ms var(--ease); }
+  .toggle input:checked + .track { background: var(--accent); border-color: var(--accent); }
+  .toggle input:checked + .track::after { transform: translateX(14px); background: var(--accent-ink); }
+  .toggle input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #mem-label { font: 500 12px/16px var(--mono); width: 24px; color: var(--text); }
+
+  /* Layout */
+  main { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(340px, 1fr); gap: 24px; padding: 24px 32px 64px; max-width: 1440px; margin: 0 auto; }
+  .col { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+  @media (max-width: 960px) {
+    main { grid-template-columns: 1fr; padding: 16px 16px 48px; }
+    header { padding: 0 16px; gap: 12px; }
+    .tagline, .status { display: none; }
+  }
+  section.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 24px; }
+  .sec-head { display: flex; align-items: baseline; gap: 8px; margin: 0 0 16px; }
+  .sec-head h2 { margin: 0; font-size: 14px; line-height: 20px; font-weight: 500; color: var(--text); }
+  .sec-head .sub { color: var(--muted); font-size: 13px; }
+  .sec-head .right { margin-left: auto; }
+
+  /* Controls */
+  button { font: 500 13px/16px var(--sans); color: var(--text); background: var(--raised); border: 1px solid var(--line); border-radius: 8px; height: 32px; padding: 0 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: background-color 150ms var(--ease), border-color 150ms var(--ease), color 150ms var(--ease), transform 150ms var(--ease); }
+  button:hover { border-color: var(--line-strong); background: #2a2a2d; }
+  button:active { transform: scale(0.98); }
+  button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button:disabled { opacity: 0.5; cursor: default; transform: none; }
+  button.primary { background: var(--text); color: #141415; border-color: var(--text); }
+  button.primary:hover { background: #ffffff; }
+  button.quiet { background: transparent; border-color: transparent; color: var(--text-2); }
+  button.quiet:hover { background: var(--raised); color: var(--text); }
+  button.sm { height: 28px; padding: 0 10px; font-size: 12px; }
+  button.v-ok:hover { color: var(--pos); border-color: rgba(76, 195, 138, 0.35); }
+  button.v-bad:hover { color: var(--neg); border-color: rgba(229, 72, 77, 0.35); }
+  input[type=text], textarea { font: 400 13px/20px var(--sans); color: var(--text); background: var(--deep); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; width: 100%; transition: border-color 150ms var(--ease); }
+  input[type=text] { height: 32px; }
+  input::placeholder, textarea::placeholder { color: var(--muted); }
+  textarea { resize: vertical; }
+  textarea.code { font-family: var(--mono); font-size: 12px; }
+  .inline { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
   .inline input { flex: 1; }
-  .mem-item { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; background: var(--panel2); }
-  .mem-item .top { display: flex; gap: 8px; align-items: baseline; }
-  .mem-item .id { font-family: var(--mono); color: var(--deja); font-weight: 600; }
-  .mem-item .score { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--muted); }
-  .why { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
-  .why span { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: #222b37; color: var(--muted); }
-  .acts { font-size: 12.5px; }
-  .acts .w { color: var(--ok); } .acts .f { color: var(--bad); }
-  .ins { padding: 6px 0; border-top: 1px solid var(--line); }
-  .ins:first-child { border-top: none; }
-  .ins .big { font-size: 20px; font-weight: 700; color: var(--deja); margin-right: 6px; }
-  .reflect { white-space: pre-wrap; background: var(--panel2); border-radius: 6px; padding: 8px 10px; font-size: 13px; margin-top: 8px; }
-  .pr-file { margin-top: 8px; }
-  .pr-file .f { font-family: var(--mono); color: var(--warn); font-weight: 600; }
-  ul.tight { margin: 4px 0; padding-left: 18px; }
-  .history { max-height: 180px; overflow: auto; }
-  .history div { font-size: 12.5px; padding: 2px 0; color: var(--muted); }
-  .history .id { font-family: var(--mono); color: var(--text); }
+  .triggers { display: flex; flex-wrap: wrap; gap: 8px; }
+  .triggers button.muted { color: var(--text-2); }
+
+  /* Notices */
+  #warnings:empty { display: none; }
+  #warnings { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; }
+  .notice { display: flex; gap: 12px; align-items: flex-start; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; color: var(--text-2); font-size: 13px; }
+  .notice svg { margin-top: 2px; color: var(--muted); }
+  .notice.ok svg { color: var(--pos); }
+  .empty { color: var(--muted); }
+
+  /* Signature: incident ids as case tags */
+  .tag { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: 4px; background: var(--raised); border: 1px solid var(--line); color: var(--text-2); font: 400 12px/16px var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; cursor: default; transition: color 150ms var(--ease), border-color 150ms var(--ease); }
+  .tag[data-inc]:hover { color: var(--text); border-color: var(--accent); }
+  .tags { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+  .ref { font-family: var(--mono); font-size: 0.92em; font-variant-numeric: tabular-nums; color: var(--text-2); border-bottom: 1px dotted var(--line-strong); cursor: default; white-space: nowrap; transition: color 150ms var(--ease), border-color 150ms var(--ease); }
+  .ref:hover, .ref.hl { color: var(--text); border-bottom-color: var(--accent); }
+  .refs { color: var(--muted); font-size: 12px; line-height: 18px; }
+
+  /* Incident */
+  .inc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .inc-title { margin: 8px 0 0; font-size: 20px; line-height: 28px; font-weight: 500; }
+  .sev { font: 500 12px/16px var(--mono); color: var(--text-2); display: inline-flex; align-items: center; gap: 6px; }
+  .sev .dot { background: var(--neg); }
+  .deja { display: inline-flex; align-items: center; gap: 8px; height: 24px; padding: 0 10px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 500; }
+  .deja .dot { background: var(--accent); }
+  .state { color: var(--muted); font-size: 12px; }
+  .signal { margin-top: 16px; background: var(--deep); border: 1px solid var(--line); border-radius: 8px; padding: 12px; color: var(--text-2); font: 400 12px/18px var(--mono); overflow-wrap: anywhere; }
+  dl.meta { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 16px 0 0; font-size: 13px; }
+  dl.meta dt { color: var(--muted); }
+  dl.meta dd { margin: 0; color: var(--text-2); overflow-wrap: anywhere; }
+  .narrative { margin: 20px 0 0; font-size: 15px; line-height: 24px; color: var(--text); }
+  .source { margin-top: 4px; color: var(--muted); font-size: 12px; }
+  .group { margin-top: 24px; }
+  .group h3 { display: flex; align-items: baseline; gap: 8px; margin: 0 0 4px; font-size: 14px; line-height: 20px; font-weight: 500; }
+  .group h3 .sub { color: var(--muted); font-size: 13px; font-weight: 400; }
+
+  /* Moment: the track-record strip */
+  .act { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+  .act-name { font-size: 14px; font-weight: 500; }
+  .record { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 8px; }
+  .strip { display: inline-flex; gap: 4px; }
+  .seg { width: 20px; height: 8px; border-radius: 2px; }
+  .seg.w { background: var(--pos); }
+  .seg.f { background: transparent; box-shadow: inset 0 0 0 1px var(--neg); }
+  .count { font: 400 12px/16px var(--mono); color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .count.none { color: var(--muted); }
+  .btns { display: flex; gap: 8px; align-items: center; }
+  .mark { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2); }
+  .mark.w svg { color: var(--pos); } .mark.f svg { color: var(--neg); }
+  .resolve { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
+  .resolve label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500; }
+
+  /* Memory panel */
+  .recall { color: var(--muted); font-size: 12px; margin-bottom: 8px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+  .mem { padding: 12px; margin: 0 -12px; border-radius: 10px; transition: background-color 150ms var(--ease); }
+  .mem + .mem { border-top: 1px solid var(--line); }
+  .mem.hl { background: var(--raised); box-shadow: inset 0 0 0 1px rgba(232, 165, 75, 0.35); }
+  .mem-top { display: flex; align-items: center; gap: 8px; }
+  .mem-title { font-size: 13px; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mem-score { margin-left: auto; color: var(--muted); font: 400 12px/16px var(--mono); }
+  .mem-meta { margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 16px; }
+  .mem-acts { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--text-2); }
+  .mem-acts span { display: inline-flex; align-items: center; gap: 4px; }
+  .mem-acts .w svg { color: var(--pos); } .mem-acts .f svg { color: var(--neg); }
+  .mem-acts svg.i { width: 14px; height: 14px; }
+
+  /* Patterns */
+  .fig { display: grid; grid-template-columns: 64px 1fr; gap: 4px 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+  .fig:first-child { border-top: none; padding-top: 0; }
+  .fig .n { font: 500 24px/28px var(--mono); font-variant-numeric: tabular-nums; }
+  .fig .n small { color: var(--muted); font-size: 14px; }
+  .fig p { margin: 0; color: var(--text-2); font-size: 13px; }
+  .fig .refs { grid-column: 2; }
+  .facts { padding-top: 12px; border-top: 1px solid var(--line); }
+  .facts h4 { margin: 12px 0 4px; font-size: 13px; font-weight: 500; color: var(--text); }
+  .facts h4:first-child { margin-top: 0; }
+  .facts ul { list-style: none; margin: 0; padding: 0; }
+  .facts li { display: flex; gap: 12px; padding: 4px 0; font-size: 13px; color: var(--text-2); }
+  .facts li .count { margin-left: auto; }
+  .reflect { margin-top: 12px; background: var(--deep); border: 1px solid var(--line); border-radius: 10px; padding: 12px; color: var(--text-2); font-size: 13px; line-height: 20px; white-space: pre-wrap; }
+
+  /* PR check and log */
+  .pr-file { padding: 12px 0; border-top: 1px solid var(--line); }
+  .pr-file:first-child { border-top: none; }
+  .pr-file .f { font: 500 13px/20px var(--mono); }
+  .pr-file .what { color: var(--text-2); font-size: 13px; }
+  .pr-file ul { list-style: none; margin: 8px 0 0; padding: 0; }
+  .pr-file li { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; padding: 2px 0; font-size: 13px; color: var(--text-2); }
+  .pr-file li .state { white-space: nowrap; }
+  .pattern { margin-top: 12px; color: var(--muted); font-size: 12px; line-height: 18px; }
+  #pr-result { margin-top: 12px; }
+  .history { max-height: 240px; overflow: auto; margin: 0 -8px; }
+  .log { display: grid; grid-template-columns: 76px 120px 72px 1fr; gap: 12px; align-items: center; padding: 6px 8px; border-radius: 6px; font-size: 13px; color: var(--text-2); }
+  .log:hover { background: var(--raised); }
+  .log .when { color: var(--muted); font: 400 12px/16px var(--mono); }
+  .log .st { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+  .log .st.open { color: var(--text); }
+  .log .st.open .dot { background: var(--accent); }
+  .log .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  @media (max-width: 960px) { .log { grid-template-columns: 76px 1fr; } .log .when, .log .st { display: none; } }
+
+  /* States */
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .inc-title:focus { outline: none; }
+  .inc-title:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
+  .busy { display: flex; align-items: center; gap: 12px; color: var(--text-2); }
+  .spinner { width: 16px; height: 16px; border-radius: 8px; border: 1.5px solid var(--line-strong); border-top-color: var(--accent); animation: spin 0.8s linear infinite; flex: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hint { margin-top: 8px; color: var(--muted); font-size: 12px; line-height: 16px; }
+  .field-error { margin-top: 8px; color: var(--neg); font-size: 12px; }
+  button[aria-pressed="true"].v-ok { color: var(--pos); border-color: rgba(76, 195, 138, 0.45); background: rgba(76, 195, 138, 0.08); }
+  button[aria-pressed="true"].v-bad { color: var(--neg); border-color: rgba(229, 72, 77, 0.45); background: rgba(229, 72, 77, 0.08); }
+  button.danger, button.quiet.danger { color: var(--neg); border-color: rgba(229, 72, 77, 0.45); background: rgba(229, 72, 77, 0.08); }
+  .mode { color: var(--muted); font-size: 12px; margin-top: 12px; display: flex; align-items: center; gap: 8px; }
+  .mode .dot.lamp { background: var(--accent); }
+  @media (pointer: coarse) {
+    button, button.sm { min-height: 44px; }
+    input[type=text] { height: 44px; }
+    .toggle { min-height: 44px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: 0ms !important; animation-duration: 0ms !important; animation-iteration-count: 1 !important; }
+    .spinner { animation: none; }
+  }
 </style>
 </head>
 <body>
 <header>
-  <h1>DejaVu</h1>
-  <span class="tag">Never fight the same incident twice.</span>
+  <span class="brand">DejaVu</span>
+  <span class="tagline">Never fight the same incident twice</span>
   <span class="spacer"></span>
-  <span id="chip-mem" class="chip">memory: …</span>
-  <span id="chip-llm" class="chip">llm: …</span>
-  <label class="toggle" title="Same alert with and without long-term memory">
+  <div class="status" aria-live="polite">
+    <span id="chip-mem"><i class="dot"></i>memory</span>
+    <span id="chip-llm"><i class="dot"></i>narrative</span>
+  </div>
+  <label class="toggle" title="Answer the same alert with or without long-term memory">
     <span>Memory</span>
-    <input type="checkbox" id="mem-toggle" checked autocomplete="off">
+    <input type="checkbox" id="mem-toggle" checked autocomplete="off" aria-describedby="mem-hint">
     <span class="track"></span>
-    <b id="mem-label">ON</b>
+    <span id="mem-label">On</span>
   </label>
-  <button id="reset" class="sm">Reset</button>
+  <button id="reset" class="quiet sm" type="button">Reset</button>
+  <span id="mem-hint" class="sr-only">Applies to the next incident you trigger</span>
 </header>
+<div id="announcer" class="sr-only" aria-live="polite"></div>
 
 <main>
-  <div id="warnings"></div>
+  <div id="warnings" role="status"></div>
 
-  <div>
+  <div class="col">
     <section class="card">
-      <h2>Trigger incident (simulated telemetry)</h2>
+      <div class="sec-head"><h2>Trigger an incident</h2><span class="sub">Simulated telemetry</span></div>
       <div class="triggers">
         {% for key, label in scenarios.items() %}
-        <button class="{{ 'primary' if key != 'normal' else '' }}" data-scenario="{{ key }}">{{ label }}</button>
+        <button type="button" class="{{ 'muted' if key == 'normal' else '' }}" data-scenario="{{ key }}">{{ label }}</button>
         {% endfor %}
       </div>
+      <div class="mode" id="mode"><i class="dot lamp"></i><span>Next trigger uses incident memory</span></div>
     </section>
 
     <section class="card" id="incident-card">
-      <h2>Incident</h2>
-      <div id="incident" class="empty">Trigger a scenario to open an incident.</div>
+      <div class="sec-head"><h2>Incident</h2></div>
+      <div id="incident" class="empty" aria-busy="false">Trigger a scenario to open an incident</div>
     </section>
 
     <section class="card">
-      <h2>Incident log</h2>
+      <div class="sec-head"><h2>Incident log</h2></div>
       <div id="history" class="history"></div>
     </section>
   </div>
 
-  <div>
+  <div class="col">
     <section class="card">
-      <h2>Memory panel: what influenced this answer</h2>
-      <div id="memory" class="empty">No investigation yet.</div>
+      <div class="sec-head"><h2>Memory</h2><span class="sub">What influenced this answer</span></div>
+      <div id="memory" class="empty">No investigation yet</div>
     </section>
 
     <section class="card">
-      <h2>Insights (computed from incident data)</h2>
-      <div id="insights" class="empty">Loading…</div>
-      <div class="inline"><button id="reflect-btn" class="sm">Ask Hindsight reflect</button><span id="reflect-status" class="meta"></span></div>
+      <div class="sec-head"><h2>Patterns</h2><span class="sub">Computed from incident data</span></div>
+      <div id="insights" class="empty">Loading</div>
+      <div class="inline"><button id="reflect-btn" class="sm" type="button">Ask Hindsight reflect</button><span id="reflect-status" class="state"></span></div>
       <div id="reflect"></div>
     </section>
 
     <section class="card">
-      <h2>PR check</h2>
-      <textarea id="pr-files" rows="3" aria-label="Changed files, one per line">auth/session.py
+      <div class="sec-head"><h2>Pull request check</h2><span class="sub">Changed files, one per line</span></div>
+      <textarea id="pr-files" class="code" rows="3" aria-label="Changed files, one per line">auth/session.py
 docs/onboarding.md</textarea>
-      <div class="inline"><button id="pr-btn" class="sm">Check changed files</button></div>
+      <div class="inline"><button id="pr-btn" class="sm" type="button">Check files</button><span id="pr-status" class="state"></span></div>
       <div id="pr-result"></div>
     </section>
   </div>
@@ -153,11 +279,39 @@ docs/onboarding.md</textarea>
 <script>
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ICONS = {
+  check: '<polyline points="20 6 9 17 4 12"/>',
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/>',
+};
+const icon = (n) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]}</svg>`;
+const tag = (id) => `<span class="tag" data-inc="${esc(id)}">${esc(id)}</span>`;
+const tags = (ids) => (ids && ids.length ? `<span class="tags">${ids.map(tag).join("")}</span>` : "");
+const ref = (id) => `<span class="ref" data-inc="${esc(id)}">${esc(id)}</span>`;
+const refs = (ids) => (ids && ids.length ? `<span class="refs">${ids.map(ref).join(", ")}</span>` : "");
+const withTags = (text) => esc(text).replace(/INC-\d{4}/g, (m) => ref(m));
+const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
 let current = null;   // {incident, analysis, alert}
+let pending = false;  // one write at a time: no double-retained verdicts
+const announce = (msg) => { const a = $("#announcer"); a.textContent = ""; setTimeout(() => { a.textContent = msg; }, 50); };
+function setPending(on) {
+  pending = on;
+  document.querySelectorAll("#incident button").forEach((b) => { b.disabled = on || b.dataset.locked === "1"; });
+  $("#incident").setAttribute("aria-busy", on ? "true" : "false");
+}
 
 function warn(list) {
-  const box = $("#warnings");
-  box.innerHTML = (list || []).filter(Boolean).map((w) => `<div class="warning">⚠ ${esc(w)}</div>`).join("");
+  $("#warnings").innerHTML = (list || []).filter(Boolean)
+    .map((w) => `<div class="notice">${icon("alert")}<span>${esc(w)}</span></div>`).join("");
+}
+
+function flash(msg) {
+  const d = document.createElement("div");
+  d.className = "notice ok";
+  d.innerHTML = `${icon("check")}<span>${esc(msg)}</span>`;
+  $("#warnings").appendChild(d);
+  setTimeout(() => d.remove(), 4000);
 }
 
 async function api(path, body) {
@@ -169,208 +323,294 @@ async function api(path, body) {
   return data;
 }
 
-function rate(a) {
-  if (a.tried === 0 || a.rate === null || a.rate === undefined) return "no history";
-  return `worked ${a.worked}/${a.tried}`;
+// Track record: one segment per past incident, filled = worked, outlined = failed.
+function record(a) {
+  if (!a.tried) return `<div class="record"><span class="count none">No history</span></div>`;
+  const hist = [...a.worked_in.map((id) => [id, "w"]), ...a.failed_in.map((id) => [id, "f"])].sort((x, y) => x[0].localeCompare(y[0]));
+  const segs = hist.map((h) => h[1]);
+  const ids = hist.map((h) => h[0]);
+  const label = a.worked ? `${a.worked} of ${a.tried} worked` : `failed ${a.tried} of ${a.tried}`;
+  return `<div class="record">
+    <span class="strip" role="img" aria-label="${esc(label)}">${segs.map((s, i) => `<span class="seg ${s}" title="${esc(ids[i])}: ${s === "w" ? "worked" : "failed"}"></span>`).join("")}</span>
+    <span class="count">${esc(label)}</span>${refs(ids)}
+  </div>`;
 }
 
 function verdictFor(inc, action) {
   const v = (inc.actions || []).find((x) => x.action === action);
   if (!v) return "";
-  return `<span class="verdict ${v.worked ? "w" : "f"}">${v.worked ? "✓ marked worked" : "✗ marked failed"}</span>`;
+  return `<span class="mark ${v.worked ? "w" : "f"}">${icon(v.worked ? "check" : "x")}${v.worked ? "Marked worked" : "Marked failed"}</span>`;
 }
 
-function actionRow(inc, a, kind) {
-  const ids = kind === "avoid" ? a.failed_in : a.worked_in;
-  const stat = kind === "avoid" ? `failed ${a.tried}/${a.tried}` : rate(a);
+function actionRow(inc, a) {
   const open = inc.status === "open";
-  return `<div class="row">
-    <span class="name">${esc(a.action)}</span>
-    <span class="stat">${esc(stat)}</span>
-    ${ids && ids.length ? `<span class="ids">${ids.map(esc).join(", ")}</span>` : ""}
-    ${verdictFor(inc, a.action)}
-    <span class="btns">${open ? `
-      <button class="sm ok" data-act="${esc(a.action)}" data-worked="1">Worked</button>
-      <button class="sm bad" data-act="${esc(a.action)}" data-worked="0">Failed</button>` : ""}</span>
+  const v = (inc.actions || []).find((x) => x.action === a.action);
+  const pressed = (w) => (v ? String(v.worked === w) : "false");
+  const tip = v ? ` title="Click the other verdict to change it"` : "";
+  return `<div class="act">
+    <div><div class="act-name">${esc(a.action)}</div>${record(a)}</div>
+    <div class="btns">${open ? `
+      <button type="button" class="sm v-ok" data-act="${esc(a.action)}" data-worked="1" aria-pressed="${pressed(true)}"${tip}>${v && v.worked ? icon("check") : ""}Worked</button>
+      <button type="button" class="sm v-bad" data-act="${esc(a.action)}" data-worked="0" aria-pressed="${pressed(false)}"${tip}>${v && !v.worked ? icon("x") : ""}Failed</button>` : verdictFor(inc, a.action)}</div>
   </div>`;
 }
 
 function renderIncident() {
   const el = $("#incident");
-  if (!current) { el.className = "empty"; el.textContent = "Trigger a scenario to open an incident."; return; }
+  if (!current) { el.className = "empty"; el.textContent = "Trigger a scenario to open an incident"; return; }
   const {incident: inc, analysis: an, alert} = current;
   el.className = "";
-  const badge = !an.use_memory ? `<span class="badge none">Memory OFF</span>`
-    : an.deja_vu ? `<span class="badge deja">Déjà vu detected</span>` : `<span class="badge none">No similar incidents</span>`;
+  const state = !an.use_memory ? `<span class="state">Memory off</span>`
+    : an.deja_vu ? `<span class="deja"><i class="dot"></i>Déjà vu</span>` : `<span class="state">No similar incidents</span>`;
   const shown = new Set([...an.do_first, ...an.avoid].map((a) => a.action));
   const extra = (inc.actions || []).filter((a) => !shown.has(a.action));
+  const rows = [
+    ["Service", esc(inc.service)],
+    ["Rule", `<span class="mono">${esc(alert ? alert.rule : inc.rule)}</span>`],
+    inc.asn ? ["ASN", `<span class="mono">${esc(inc.asn)}</span>`] : null,
+    inc.files && inc.files.length ? ["Files", `<span class="mono">${inc.files.map(esc).join(", ")}</span>`] : null,
+    inc.prior_change ? ["Recent change", `${esc(inc.prior_change.summary)} <span class="state">${esc(inc.prior_change.hours_before)}h ago</span>`] : null,
+    ["Status", esc(inc.status)],
+  ].filter(Boolean);
+  const memoryAnswer = an.use_memory && an.deja_vu;
   el.innerHTML = `
-    <div class="inc-head">
-      <span class="mono">${esc(inc.id)}</span><span class="sev">${esc(inc.severity)}</span>
-      <span class="title">${esc(inc.title)}</span>${badge}
+    <div class="inc-head">${tag(inc.id)}<span class="sev"><i class="dot"></i>${esc(inc.severity)}</span>${state}</div>
+    <h3 class="inc-title" id="inc-title" tabindex="-1">${esc(inc.title)}</h3>
+    <div class="signal">${esc(inc.signal)}</div>
+    <dl class="meta">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>
+    <p class="narrative">${withTags(an.narrative)}</p>
+    <div class="source">${an.narrative_source === "llm" ? "Written by Groq, checked to cite only matched incidents" : "Template narrative"}</div>
+    <div class="group">
+      <h3>${memoryAnswer ? "Do first" : "Generic first steps"}<span class="sub">${memoryAnswer ? "Ranked by track record" : "No incident history consulted"}</span></h3>
+      ${an.do_first.map((a) => actionRow(inc, a)).join("") || `<div class="act empty">No action worked in at least half of the similar incidents</div>`}
     </div>
-    <div class="signal mono">${esc(inc.signal)}</div>
-    <p class="meta">service <b>${esc(inc.service)}</b> · rule <b>${esc(alert ? alert.rule : inc.rule)}</b>
-      ${inc.asn ? ` · ASN <b>${esc(inc.asn)}</b>` : ""}
-      ${inc.files && inc.files.length ? ` · files <span class="mono">${inc.files.map(esc).join(", ")}</span>` : ""}
-      ${inc.prior_change ? ` · recent change <b>${esc(inc.prior_change.summary)}</b> (${esc(inc.prior_change.hours_before)}h ago)` : ""}
-      · status <b>${esc(inc.status)}</b></p>
-    <div class="narrative">${esc(an.narrative)}<small>${an.narrative_source === "llm" ? "Narrative by Groq, checked to cite only matched incidents" : "Template narrative"}</small></div>
-    <h3 class="do">${an.use_memory && an.deja_vu ? "Do first (ranked by track record)" : "Suggested first steps (generic)"}</h3>
-    ${an.do_first.map((a) => actionRow(inc, a, "do")).join("") || `<div class="empty">No action with a success rate of at least 50%.</div>`}
-    ${an.avoid.length ? `<h3 class="avoid">We tried this before and it failed</h3>${an.avoid.map((a) => actionRow(inc, a, "avoid")).join("")}` : ""}
-    ${extra.length ? `<h3>Other recorded actions</h3>${extra.map((a) => `<div class="row"><span class="name">${esc(a.action)}</span>${verdictFor(inc, a.action)}</div>`).join("")}` : ""}
+    ${an.avoid.length ? `<div class="group"><h3>We tried this before and it failed</h3>${an.avoid.map((a) => actionRow(inc, a)).join("")}</div>` : ""}
+    ${extra.length ? `<div class="group"><h3>Other recorded actions</h3>${extra.map((a) => `<div class="act"><div class="act-name">${esc(a.action)}</div><div class="btns">${verdictFor(inc, a.action)}</div></div>`).join("")}</div>` : ""}
     ${inc.status === "open" ? `
-      <div class="inline"><input type="text" id="custom-action" placeholder="Another action you took (e.g. Roll back last deploy)">
-        <button class="sm ok" id="custom-ok">Worked</button><button class="sm bad" id="custom-bad">Failed</button></div>
-      <h3>Resolve</h3>
-      <textarea id="root-cause" rows="2" placeholder="Root cause (retained with the postmortem)"></textarea>
-      <div class="inline"><button class="primary" id="resolve-btn">Resolve and retain postmortem</button></div>`
-    : `<p class="meta">Resolved. Root cause: ${esc(inc.root_cause || "(none given)")}</p>`}
+      <div class="inline"><input type="text" id="custom-action" placeholder="Another action you took" aria-label="Another action you took">
+        <button type="button" class="sm v-ok" id="custom-ok" data-locked="1" disabled>Worked</button><button type="button" class="sm v-bad" id="custom-bad" data-locked="1" disabled>Failed</button></div>
+      <div class="resolve">
+        <label for="root-cause">Resolve</label>
+        <textarea id="root-cause" rows="2" placeholder="What caused it, in one or two sentences" aria-describedby="rc-hint"></textarea>
+        <div class="hint" id="rc-hint">Retained with the postmortem and used the next time this happens. Resolving closes the incident.</div>
+        <div class="inline"><button type="button" class="primary" id="resolve-btn" data-locked="1" disabled>Resolve and retain postmortem</button></div>
+      </div>`
+    : `<div class="resolve"><span class="state">Resolved. Root cause: ${esc(inc.root_cause || "none given")}</span></div>`}
   `;
   el.querySelectorAll("button[data-act]").forEach((b) => b.onclick = () => outcome(b.dataset.act, b.dataset.worked === "1"));
   const c = $("#custom-action");
   if (c) {
-    $("#custom-ok").onclick = () => c.value.trim() && outcome(c.value.trim(), true);
-    $("#custom-bad").onclick = () => c.value.trim() && outcome(c.value.trim(), false);
+    const lock = (btn, on) => { btn.dataset.locked = on ? "1" : "0"; btn.disabled = on || pending; };
+    c.oninput = () => { lock($("#custom-ok"), !c.value.trim()); lock($("#custom-bad"), !c.value.trim()); };
+    c.onkeydown = (e) => { if (e.key === "Enter" && c.value.trim()) outcome(c.value.trim(), true); };
+    $("#custom-ok").onclick = () => outcome(c.value.trim(), true);
+    $("#custom-bad").onclick = () => outcome(c.value.trim(), false);
+    const rc = $("#root-cause");
+    rc.oninput = () => lock($("#resolve-btn"), !rc.value.trim());
     $("#resolve-btn").onclick = resolve;
   }
+}
+
+function whyLine(m) {
+  const keep = m.why.filter((w) => !w.startsWith("same type") && !/keywords$/.test(w));
+  return keep.map((w) => w.replace("shared files: ", "same files ").replace(/^same service \((.*)\)$/, "$1")
+    .replace(/^same ASN \((.*)\)$/, "same ASN $1").replace(/^recalled.*/, "recalled")).join(" · ");
 }
 
 function renderMemory() {
   const el = $("#memory");
   if (!current) return;
   const an = current.analysis;
-  if (!an.use_memory) { el.className = "empty"; el.innerHTML = "Memory is OFF. No past incidents were consulted, so the advice is generic."; return; }
+  if (!an.use_memory) { el.className = "empty"; el.textContent = "Memory is off, so no past incidents were consulted and the advice is generic"; return; }
   el.className = "";
-  const src = (an.memory_backend || "").startsWith("hindsight") ? "Hindsight recall" : `Memory recall (${esc(an.memory_backend || "none")})`;
-  const recalled = an.recalled_ids && an.recalled_ids.length
-    ? `<p class="meta">${src} returned: <span class="mono">${an.recalled_ids.map(esc).join(", ")}</span></p>`
-    : `<p class="meta">${src} returned no incident ids.</p>`;
-  if (!an.matches.length) { el.innerHTML = recalled + `<div class="empty">No past incident scored high enough to count as similar.</div>`; return; }
+  const src = (an.memory_backend || "").startsWith("hindsight") ? "Hindsight recall" : `Recall (${esc(an.memory_backend || "none")})`;
+  const recalled = `<div class="recall">${src} returned ${an.recalled_ids && an.recalled_ids.length ? refs(an.recalled_ids) : "no incident ids"}</div>`;
+  if (!an.matches.length) { el.innerHTML = recalled + `<div class="empty">No past incident scored high enough to count as similar</div>`; return; }
   el.innerHTML = recalled + an.matches.map((m) => `
-    <div class="mem-item">
-      <div class="top"><span class="id">${esc(m.id)}</span><span>${esc(m.title)}</span><span class="score">score ${m.score}</span></div>
-      <div class="meta">${esc(m.opened_at.replace("T", " "))} · ${esc(m.type)} · ${esc(m.service)}</div>
-      <div class="why">${m.why.map((w) => `<span>${esc(w)}</span>`).join("")}</div>
-      <div class="acts">${m.actions.map((a) => `<span class="${a.worked ? "w" : "f"}">${a.worked ? "✓" : "✗"} ${esc(a.action)}</span>`).join(" · ")}</div>
+    <div class="mem" data-id="${esc(m.id)}">
+      <div class="mem-top">${tag(m.id)}<span class="mem-title" title="${esc(m.title)}">${esc(m.title)}</span><span class="mem-score">${esc(m.score)}</span></div>
+      <div class="mem-meta">${esc(m.opened_at.slice(0, 10))} · ${esc(whyLine(m))}</div>
+      <div class="mem-acts">${m.actions.map((a) => `<span class="${a.worked ? "w" : "f"}">${icon(a.worked ? "check" : "x")}${esc(a.action)}</span>`).join("")}</div>
     </div>`).join("");
 }
 
-async function trigger(scenario) {
+async function trigger(scenario, label) {
   const btns = document.querySelectorAll("button[data-scenario]");
   btns.forEach((b) => b.disabled = true);
   warn([]);
+  const el = $("#incident");
+  const useMemory = $("#mem-toggle").checked;
+  el.className = ""; el.setAttribute("aria-busy", "true");
+  el.innerHTML = `<div class="busy"><span class="spinner" aria-hidden="true"></span>Investigating ${esc(label)}${useMemory ? " against incident memory" : " without memory"}</div>`;
+  announce(`Investigating ${label}`);
   try {
-    const data = await api("/api/trigger", {scenario, use_memory: $("#mem-toggle").checked});
+    const data = await api("/api/trigger", {scenario, use_memory: useMemory});
     if (!data.detected) {
       current = null; renderIncident();
-      $("#incident").innerHTML = `<span class="empty">${esc(data.message)}</span>`;
+      el.textContent = data.message; announce(data.message);
     } else {
       current = {incident: data.incident, analysis: data.analysis, alert: data.alert};
       renderIncident(); renderMemory();
+      const an = data.analysis, top = an.do_first[0];
+      announce(`Opened ${data.incident.id}, ${data.incident.title}. ` +
+        (an.deja_vu ? `Déjà vu, ${plural(an.matches.length, "similar incident")}. ` : "") +
+        (top ? `Do first: ${top.action}.` : ""));
+      $("#inc-title").focus({preventScroll: true});
     }
     warn(data.warnings);
-    loadState();
-  } finally { btns.forEach((b) => b.disabled = false); }
+    loadState().catch(() => {});
+  } catch (e) {
+    renderIncident();   // back to the previous incident or the empty state; api() already showed the error
+  } finally {
+    el.setAttribute("aria-busy", "false");
+    btns.forEach((b) => b.disabled = false);
+  }
 }
 
 async function outcome(action, worked) {
+  if (pending || !action) return;
   const id = current.incident.id;
-  const data = await api(`/api/incidents/${id}/outcome`, {action, worked, note: ""});
-  current.incident = data.incident;
-  renderIncident();
-  warn(data.warnings);
-  if (data.retained) flash(`Retained in memory: "${action}" ${worked ? "worked" : "failed"} for ${id}.`);
+  const prev = (current.incident.actions || []).find((x) => x.action === action);
+  if (prev && prev.worked === worked) return;   // same verdict again: nothing new to retain
+  const rcBox = $("#root-cause");
+  const rc = rcBox ? rcBox.value : "";
+  setPending(true);
+  try {
+    const data = await api(`/api/incidents/${id}/outcome`, {action, worked, note: prev ? "corrected verdict" : ""});
+    current.incident = data.incident;
+    renderIncident();
+    if ($("#root-cause")) { $("#root-cause").value = rc; $("#root-cause").oninput(); }
+    warn(data.warnings);
+    const msg = `${prev ? "Changed" : "Retained"}: ${action} ${worked ? "worked" : "failed"} for ${id}`;
+    if (data.retained) flash(msg);
+    announce(data.retained ? msg : `Saved locally, not retained in memory: ${action}`);
+  } catch (e) { /* api() showed the error; the incident is unchanged */ }
+  finally { setPending(false); }
 }
 
 async function resolve() {
+  const rc = $("#root-cause").value.trim();
+  if (pending || !rc) return;
   const id = current.incident.id;
-  const data = await api(`/api/incidents/${id}/resolve`, {root_cause: $("#root-cause").value});
-  current.incident = data.incident;
-  renderIncident(); warn(data.warnings);
-  if (data.retained) flash(`Postmortem for ${id} retained in memory. The next similar incident will use it.`);
-  loadState(); loadInsights(false);
+  setPending(true);
+  try {
+    const data = await api(`/api/incidents/${id}/resolve`, {root_cause: rc});
+    current.incident = data.incident;
+    renderIncident(); warn(data.warnings);
+    if (data.retained) flash(`Postmortem for ${id} retained. The next similar incident will use it`);
+    announce(`${id} resolved`);
+    loadState().catch(() => {});
+  } catch (e) { /* api() showed the error; the root cause text is kept */ }
+  finally { setPending(false); }
 }
 
-function flash(msg) {
-  const d = document.createElement("div");
-  d.className = "warning"; d.style.cssText = "background:#132a1b;border-color:#2a5d36;color:#7ee2a0";
-  d.textContent = "✓ " + msg;
-  $("#warnings").appendChild(d);
-  setTimeout(() => d.remove(), 4000);
+function showOffline() {
+  const msg = `<div class="notice">${icon("alert")}<span>Could not reach the DejaVu server. Check that <span class="mono">python app.py</span> is running.</span></div>
+    <div class="inline"><button type="button" class="sm" data-retry>Retry</button></div>`;
+  $("#insights").className = ""; $("#insights").innerHTML = msg;
+  $("#history").innerHTML = `<div class="empty">Incident log unavailable</div>`;
+  document.querySelectorAll("[data-retry]").forEach((b) => b.onclick = () => { warn([]); loadState().catch(showOffline); });
 }
 
 async function loadState() {
   const s = await api("/api/state");
-  const mem = $("#chip-mem");
-  mem.textContent = `memory: ${s.memory_backend}${s.bank ? " · " + s.bank : ""}`;
-  mem.className = "chip " + (s.memory_backend === "hindsight" ? "on" : "off");
-  const llm = $("#chip-llm");
-  llm.textContent = s.llm ? "llm: groq" : "llm: template";
-  llm.className = "chip " + (s.llm ? "on" : "off");
+  const hs = s.memory_backend === "hindsight";
+  $("#chip-mem").innerHTML = `<i class="dot ${hs ? "live" : ""}"></i>memory ${esc(s.memory_backend)}${s.bank ? " · " + esc(s.bank) : ""}`;
+  $("#chip-llm").innerHTML = `<i class="dot ${s.llm ? "live" : ""}"></i>narrative ${s.llm ? "groq" : "template"}`;
   if (s.startup_warnings && s.startup_warnings.length) warn(s.startup_warnings);
-  $("#history").innerHTML = s.incidents.slice().reverse().map((i) =>
-    `<div><span class="id">${esc(i.id)}</span> ${esc(i.opened_at.replace("T", " "))} · ${esc(i.type)} · ${esc(i.status)} · ${esc(i.title)}</div>`).join("");
+  $("#history").innerHTML = s.incidents.slice().reverse().map((i) => `
+    <div class="log">${tag(i.id)}<span class="when">${esc(i.opened_at.replace("T", " "))}</span>
+      <span class="st ${i.status === "open" ? "open" : ""}"><i class="dot"></i>${esc(i.status)}</span>
+      <span class="t" title="${esc(i.title)}">${esc(i.title)}</span></div>`).join("");
   renderComputed(s.insights);
 }
 
 function renderComputed(c) {
-  const fails = c.always_fail.map((a) => `<li><b>${esc(a.action)}</b> failed ${a.tried}/${a.tried} <span class="mono">(${a.failed_in.map(esc).join(", ")})</span></li>`).join("");
-  const rel = c.reliable.map((a) => `<li><b>${esc(a.action)}</b> worked ${a.worked}/${a.tried}</li>`).join("");
-  const asns = c.recurring_asns.map((a) => `<li><b>${esc(a.asn)}</b>: ${a.count} incidents <span class="mono">(${a.ids.map(esc).join(", ")})</span></li>`).join("");
+  const li = (name, count) => `<li><span>${esc(name)}</span><span class="count">${count}</span></li>`;
+  const fails = c.always_fail.map((a) => li(a.action, `failed ${a.tried} of ${a.tried}`)).join("");
+  const rel = c.reliable.map((a) => li(a.action, `${a.worked} of ${a.tried} worked`)).join("");
+  const asns = c.recurring_asns.map((a) => li(a.asn, plural(a.count, "incident"))).join("");
+  const fig = (x) => `<div class="fig"><div class="n">${x.count}<small>/${x.total}</small></div><p>${esc(x.text.replace(/\.$/, ""))}</p>${refs(x.ids)}</div>`;
   $("#insights").className = "";
   $("#insights").innerHTML = `
-    <div class="ins"><span class="big">${c.tuesday_evening.count}/${c.tuesday_evening.total}</span>${esc(c.tuesday_evening.text)}
-      <div class="mono meta">${c.tuesday_evening.ids.map(esc).join(", ")}</div></div>
-    <div class="ins"><span class="big">${c.auth_precursor.count}/${c.auth_precursor.total}</span>${esc(c.auth_precursor.text)}
-      <div class="mono meta">${c.auth_precursor.ids.map(esc).join(", ")}</div></div>
-    <div class="ins">Fixes that always fail:<ul class="tight">${fails || "<li>none</li>"}</ul></div>
-    <div class="ins">Fixes that reliably work:<ul class="tight">${rel || "<li>none</li>"}</ul></div>
-    <div class="ins">Recurring attacker ASNs:<ul class="tight">${asns || "<li>none</li>"}</ul></div>`;
+    ${fig(c.tuesday_evening)}${fig(c.auth_precursor)}
+    <div class="facts">
+      <h4>Fixes that always fail</h4><ul>${fails || li("None", "")}</ul>
+      <h4>Fixes that reliably work</h4><ul>${rel || li("None", "")}</ul>
+      <h4>Recurring attacker ASNs</h4><ul>${asns || li("None", "")}</ul>
+    </div>`;
 }
 
-async function loadInsights(withReflect) {
-  if (!withReflect) return;
-  $("#reflect-status").textContent = "asking memory…";
+async function loadReflect() {
+  $("#reflect-status").textContent = "Asking memory, this can take a few seconds";
   $("#reflect-btn").disabled = true;
   try {
     const d = await api("/api/insights");
     renderComputed(d.computed);
     if (d.reflect && d.reflect.text) {
-      $("#reflect").innerHTML = `<div class="reflect">${esc(d.reflect.text)}</div>`;
-      $("#reflect-status").textContent = `reflect via ${d.reflect.backend}`;
+      $("#reflect").innerHTML = `<div class="reflect">${withTags(d.reflect.text)}</div>`;
+      $("#reflect-status").textContent = `Reflect via ${d.reflect.backend}`;
     } else {
       $("#reflect").innerHTML = "";
       $("#reflect-status").textContent = "";
       warn(d.warnings);
     }
-  } finally { $("#reflect-btn").disabled = false; }
+  } catch (e) { $("#reflect-status").textContent = ""; }
+  finally { $("#reflect-btn").disabled = false; }
 }
 
 async function prCheck() {
   const files = $("#pr-files").value.split(/\n|,/).map((s) => s.trim()).filter(Boolean);
-  const d = await api("/api/pr-check", {files});
   const el = $("#pr-result");
-  if (!d.findings.length) { el.innerHTML = `<p class="meta">No changed file has incident history.</p>`; return; }
+  if (!files.length) { el.innerHTML = `<div class="field-error" role="alert">Enter at least one changed file path</div>`; $("#pr-files").focus(); return; }
+  $("#pr-btn").disabled = true; $("#pr-status").textContent = "Checking";
+  let d;
+  try { d = await api("/api/pr-check", {files}); }
+  catch (e) { return; }
+  finally { $("#pr-btn").disabled = false; $("#pr-status").textContent = ""; }
+  if (!d.findings.length) { el.innerHTML = `<p class="state">None of the ${plural(files.length, "file")} has incident history</p>`; announce("No incident history for these files"); return; }
+  announce(`${plural(d.findings.length, "file")} with incident history`);
   el.innerHTML = d.findings.map((f) => {
-    const parts = [f.outages ? `${f.outages} outage${f.outages > 1 ? "s" : ""}` : "", f.security ? `${f.security} security incident${f.security > 1 ? "s" : ""}` : ""].filter(Boolean).join(" and ");
-    return `<div class="pr-file">⚠ <span class="f">${esc(f.file)}</span> was involved in ${esc(parts)}
-      <ul class="tight">${f.incidents.map((h) => `<li><span class="mono">${esc(h.id)}</span> ${esc(h.opened_at.slice(0, 10))}: ${esc(h.title)}</li>`).join("")}</ul></div>`;
-  }).join("") + (d.pattern ? `<p class="meta"><b>Pattern:</b> ${esc(d.pattern.text)}</p>` : "");
+    const parts = [f.outages ? plural(f.outages, "outage") : "", f.security ? plural(f.security, "security incident") : ""].filter(Boolean).join(" and ");
+    return `<div class="pr-file"><div><span class="f">${esc(f.file)}</span> <span class="what">was involved in ${esc(parts)}</span></div>
+      <ul>${f.incidents.map((h) => `<li>${tag(h.id)}<span class="state mono">${esc(h.opened_at.slice(0, 10))}</span><span>${esc(h.title)}</span></li>`).join("")}</ul></div>`;
+  }).join("") + (d.pattern ? `<div class="pattern">${withTags(d.pattern.text)}</div>` : "");
 }
 
-document.querySelectorAll("button[data-scenario]").forEach((b) => b.onclick = () => trigger(b.dataset.scenario));
-$("#mem-toggle").onchange = (e) => { $("#mem-label").textContent = e.target.checked ? "ON" : "OFF"; };
-$("#reflect-btn").onclick = () => loadInsights(true);
-$("#pr-btn").onclick = prCheck;
-$("#reset").onclick = async () => {
-  const d = await api("/api/reset", {});
-  current = null; renderIncident(); $("#memory").className = "empty"; $("#memory").textContent = "No investigation yet.";
-  $("#reflect").innerHTML = ""; warn(d.warnings); loadState();
+// Signature: hovering any case tag highlights that incident in the memory panel.
+document.addEventListener("mouseover", (e) => {
+  const t = e.target.closest && e.target.closest("[data-inc]");
+  document.querySelectorAll(".mem.hl, .ref.hl").forEach((m) => m.classList.remove("hl"));
+  if (t) document.querySelectorAll(`.mem[data-id="${t.dataset.inc}"], .ref[data-inc="${t.dataset.inc}"]`).forEach((m) => m.classList.add("hl"));
+});
+
+document.querySelectorAll("button[data-scenario]").forEach((b) => b.onclick = () => trigger(b.dataset.scenario, b.textContent.trim()));
+const syncToggle = () => {
+  const on = $("#mem-toggle").checked;
+  $("#mem-label").textContent = on ? "On" : "Off";
+  $("#mode").innerHTML = on ? `<i class="dot lamp"></i><span>Next trigger uses incident memory</span>`
+                            : `<i class="dot"></i><span>Next trigger runs without memory and gives generic advice</span>`;
 };
-$("#mem-label").textContent = $("#mem-toggle").checked ? "ON" : "OFF";
-loadState().catch(() => {});
+$("#mem-toggle").onchange = syncToggle;
+$("#reflect-btn").onclick = loadReflect;
+$("#pr-btn").onclick = prCheck;
+let resetTimer = null;
+$("#reset").onclick = async () => {
+  const btn = $("#reset");
+  if (!btn.classList.contains("danger")) {   // first click arms, second click confirms
+    btn.classList.add("danger"); btn.textContent = "Confirm reset";
+    announce("Press again to reset. This removes incidents opened in this session.");
+    resetTimer = setTimeout(() => { btn.classList.remove("danger"); btn.textContent = "Reset"; }, 4000);
+    return;
+  }
+  clearTimeout(resetTimer); btn.classList.remove("danger"); btn.textContent = "Reset";
+  let d;
+  try { d = await api("/api/reset", {}); } catch (e) { return; }
+  current = null; renderIncident(); $("#memory").className = "empty"; $("#memory").textContent = "No investigation yet";
+  $("#reflect").innerHTML = ""; warn(d.warnings); loadState().catch(showOffline); announce("Reset to the seed incident history");
+};
+syncToggle();
+loadState().catch(showOffline);
 </script>
 </body>
 </html>

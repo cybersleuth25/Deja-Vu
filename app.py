@@ -58,6 +58,22 @@ def create_app(store: Store | None = None, memory=None, llm="auto") -> Flask:
         return {"memory_backend": memory.name, "bank": getattr(memory, "bank_id", None),
                 "llm": bool(llm), "startup_warnings": startup_warnings}
 
+    @app.before_request
+    def require_json_for_writes():
+        # Browsers send text/plain and form posts cross-origin without a CORS preflight, so a page
+        # on another site could otherwise call these endpoints. A JSON content type forces the
+        # preflight, which this app never approves.
+        if request.method == "POST" and not request.is_json:
+            return jsonify({"error": "Content-Type must be application/json"}), 415
+
+    def must_be_open(iid: str):
+        inc = store.get(iid)
+        if inc is None:
+            return jsonify({"error": "not found"}), 404
+        if inc.get("status") != "open":
+            return jsonify({"error": f"{iid} is {inc.get('status')}; history of closed incidents is read-only"}), 409
+        return None
+
     @app.get("/")
     def index():
         return render_template("index.html", scenarios=sim_events.SCENARIOS)
@@ -96,8 +112,8 @@ def create_app(store: Store | None = None, memory=None, llm="auto") -> Flask:
         action = (body.get("action") or "").strip()
         if not action or "worked" not in body:
             return jsonify({"error": "action and worked are required"}), 400
-        if store.get(iid) is None:
-            return jsonify({"error": "not found"}), 404
+        if (refused := must_be_open(iid)) is not None:
+            return refused
         worked, note = bool(body["worked"]), (body.get("note") or "").strip()
         inc = store.record_action(iid, action, worked, note)
         warnings, retained = [], False
@@ -111,8 +127,8 @@ def create_app(store: Store | None = None, memory=None, llm="auto") -> Flask:
     @app.post("/api/incidents/<iid>/resolve")
     def resolve(iid):
         body = request.get_json(silent=True) or {}
-        if store.get(iid) is None:
-            return jsonify({"error": "not found"}), 404
+        if (refused := must_be_open(iid)) is not None:
+            return refused
         inc = store.update(iid, status="resolved", root_cause=(body.get("root_cause") or "").strip(),
                            resolved_at=datetime.now().strftime("%Y-%m-%dT%H:%M"))
         warnings, retained = [], False

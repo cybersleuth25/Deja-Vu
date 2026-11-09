@@ -131,15 +131,18 @@ def _times(n: int) -> str:
 
 
 def template_narrative(alert: dict, matches: list[dict], ranked: dict, hint: str | None) -> str:
+    """Short on purpose: the Do first and failed lists carry the detail, this states the verdict."""
     ids = ", ".join(m["id"] for m in matches)
     kind = "security incident" if alert["type"] == "security" else alert["type"]
-    out = [f"Déjà vu: this {kind} on {alert['service']} matches {len(matches)} past incident(s): {ids}."]
+    n = len(matches)
+    out = [f"This {kind} on {alert['service']} matches {n} past incident{'' if n == 1 else 's'}: {ids}."]
+    verdict = []
     for a in ranked["do_first"][:1]:
-        out.append(f"Do first: {a['action']}. It worked {a['worked']} of {a['tried']} {_times(a['tried'])} "
-                   f"({', '.join(a['worked_in'])}).")
-    for a in ranked["avoid"][:2]:
-        out.append(f"We tried this before and it failed: {a['action']}, failed {a['tried']} of {a['tried']} "
-                   f"{_times(a['tried'])} ({', '.join(a['failed_in'])}).")
+        verdict.append(f"{a['action']} worked {a['worked']} of {a['tried']} {_times(a['tried'])}")
+    for a in ranked["avoid"][:1]:
+        verdict.append(f"{a['action']} failed {a['tried']} of {a['tried']}")
+    if verdict:
+        out.append("; ".join(verdict) + ".")
     if hint:
         out.append(hint)
     return " ".join(out)

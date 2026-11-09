@@ -89,5 +89,48 @@ def test_pr_check_endpoint(client):
 
 def test_reset_restores_seed(client):
     client.post("/api/trigger", json={"scenario": "port_scan"})
-    assert client.post("/api/reset").get_json()["ok"]
+    assert client.post("/api/reset", json={}).get_json()["ok"]
     assert len(client.get("/api/state").get_json()["incidents"]) == 32
+
+
+# ---- security: cross-site simple requests and read-only history ----
+import pytest  # noqa: E402
+
+WRITE_ENDPOINTS = ["/api/trigger", "/api/reset", "/api/pr-check",
+                   "/api/incidents/INC-0001/outcome", "/api/incidents/INC-0001/resolve"]
+
+
+@pytest.mark.parametrize("path", WRITE_ENDPOINTS)
+@pytest.mark.parametrize("content_type", ["text/plain", "application/x-www-form-urlencoded", "multipart/form-data"])
+def test_non_json_posts_are_rejected(client, store, path, content_type):
+    # These are the content types a browser may send cross-origin without a CORS preflight.
+    before = store.all()
+    r = client.post(path, data="x=1", content_type=content_type)
+    assert r.status_code == 415
+    assert store.all() == before
+
+
+def test_cross_site_resolve_cannot_write_memory(store):
+    mem = MockMemory()
+    c = create_app(store=store, memory=mem, llm=None).test_client()
+    iid = c.post("/api/trigger", json={"scenario": "checkout_500s"}).get_json()["incident"]["id"]
+    docs = len(mem.docs)
+    assert c.post(f"/api/incidents/{iid}/resolve", data="x", content_type="text/plain").status_code == 415
+    assert store.get(iid)["status"] == "open" and len(mem.docs) == docs
+
+
+def test_resolved_incident_history_is_read_only(client, store):
+    original = store.get("INC-0004")
+    r = client.post("/api/incidents/INC-0004/outcome", json={"action": "Restart connection pool", "worked": True})
+    assert r.status_code == 409
+    r = client.post("/api/incidents/INC-0004/resolve", json={"root_cause": "overwritten"})
+    assert r.status_code == 409
+    assert store.get("INC-0004") == original
+
+
+def test_resolving_twice_is_refused(client, store):
+    iid = client.post("/api/trigger", json={"scenario": "port_scan"}).get_json()["incident"]["id"]
+    assert client.post(f"/api/incidents/{iid}/resolve", json={"root_cause": "scanner"}).status_code == 200
+    r = client.post(f"/api/incidents/{iid}/resolve", json={"root_cause": "changed my mind"})
+    assert r.status_code == 409 and store.get(iid)["root_cause"] == "scanner"
+    assert client.post(f"/api/incidents/{iid}/outcome", json={"action": "x", "worked": True}).status_code == 409
