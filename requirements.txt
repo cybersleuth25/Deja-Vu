@@ -1,0 +1,8 @@
+flask>=3.0
+hindsight-client==1.2.0
+groq>=1.0
+python-dotenv>=1.0
+pytest>=8.0
+
+# Band agents (optional)
+band-sdk==8.1.0

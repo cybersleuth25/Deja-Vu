@@ -1,0 +1,8 @@
+# Copy to agent_config.yaml (git-ignored) and fill in the values from
+# Band > Agents > Connect remote agent > "Agent Created Successfully!" dialog.
+security_agent:
+  agent_id: "<SecurityAgent ID>"
+  api_key: "<SecurityAgent API key>"
+reliability_agent:
+  agent_id: "<ReliabilityAgent ID>"
+  api_key: "<ReliabilityAgent API key>"

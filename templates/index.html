@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DejaVu</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%23c297ff'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #0d1117; --panel: #151b23; --panel2: #1b222c; --line: #2a3340; --text: #e6edf3;
+    --muted: #8b98a8; --accent: #7c9cff; --ok: #3fb950; --bad: #f85149; --warn: #d29922; --deja: #c297ff;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 2; }
+  header h1 { margin: 0; font-size: 18px; letter-spacing: .3px; }
+  header .tag { color: var(--muted); font-size: 13px; }
+  .spacer { flex: 1; }
+  .chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+  .chip.on { color: var(--ok); border-color: #2a5d36; }
+  .chip.off { color: var(--warn); border-color: #5d4a1a; }
+  main { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr); gap: 16px; padding: 16px 20px; max-width: 1400px; margin: 0 auto; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; padding: 12px 16px; } }
+  section.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
+  section.card h2 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); font-weight: 600; }
+  button { font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line); border-radius: 7px; padding: 6px 12px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  button.primary { background: #23315a; border-color: #34488a; }
+  button.ok { color: var(--ok); } button.bad { color: var(--bad); }
+  button.sm { padding: 2px 9px; font-size: 12px; }
+  .triggers { display: flex; flex-wrap: wrap; gap: 8px; }
+  .toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+  .toggle input { display: none; }
+  .toggle .track { width: 40px; height: 22px; border-radius: 999px; background: #3a2a2a; position: relative; transition: .15s; border: 1px solid var(--line); }
+  .toggle .track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--text); transition: .15s; }
+  .toggle input:checked + .track { background: #23402b; }
+  .toggle input:checked + .track::after { left: 20px; }
+  #warnings:empty { display: none; }
+  #warnings { grid-column: 1 / -1; }
+  .warning { background: #2b2210; border: 1px solid #5d4a1a; color: #f0c674; padding: 8px 12px; border-radius: 8px; margin-bottom: 6px; font-size: 13px; }
+  .empty { color: var(--muted); }
+  .inc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .inc-head .title { font-size: 17px; font-weight: 600; }
+  .sev { font-family: var(--mono); font-size: 12px; padding: 1px 6px; border-radius: 4px; background: #3a1d1d; color: #ff9b94; }
+  .badge { font-weight: 700; font-size: 12px; padding: 3px 10px; border-radius: 999px; }
+  .badge.deja { background: #2c1f45; color: var(--deja); border: 1px solid #5b3d91; animation: pulse 1.6s ease-out 2; }
+  .badge.none { background: var(--panel2); color: var(--muted); border: 1px solid var(--line); }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(194,151,255,.6); } 100% { box-shadow: 0 0 0 12px rgba(194,151,255,0); } }
+  .mono { font-family: var(--mono); font-size: 12.5px; }
+  .signal { background: #0b0f14; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; color: #c9d1d9; overflow-wrap: anywhere; }
+  .meta { color: var(--muted); font-size: 12.5px; margin: 6px 0 0; }
+  .narrative { margin: 12px 0; padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--panel2); border-radius: 0 6px 6px 0; }
+  .narrative small { display: block; color: var(--muted); margin-top: 4px; }
+  h3 { font-size: 13px; margin: 14px 0 6px; }
+  h3.do { color: var(--ok); } h3.avoid { color: var(--bad); }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--line); }
+  .row:first-of-type { border-top: none; }
+  .row .name { font-weight: 600; }
+  .row .stat { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .row .ids { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+  .row .btns { margin-left: auto; display: flex; gap: 6px; }
+  .verdict { font-size: 12px; font-weight: 600; }
+  .verdict.w { color: var(--ok); } .verdict.f { color: var(--bad); }
+  input[type=text], textarea { font: inherit; color: var(--text); background: #0b0f14; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100%; }
+  textarea { font-family: var(--mono); font-size: 12.5px; resize: vertical; }
+  .inline { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
+  .inline input { flex: 1; }
+  .mem-item { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; background: var(--panel2); }
+  .mem-item .top { display: flex; gap: 8px; align-items: baseline; }
+  .mem-item .id { font-family: var(--mono); color: var(--deja); font-weight: 600; }
+  .mem-item .score { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .why { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
+  .why span { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: #222b37; color: var(--muted); }
+  .acts { font-size: 12.5px; }
+  .acts .w { color: var(--ok); } .acts .f { color: var(--bad); }
+  .ins { padding: 6px 0; border-top: 1px solid var(--line); }
+  .ins:first-child { border-top: none; }
+  .ins .big { font-size: 20px; font-weight: 700; color: var(--deja); margin-right: 6px; }
+  .reflect { white-space: pre-wrap; background: var(--panel2); border-radius: 6px; padding: 8px 10px; font-size: 13px; margin-top: 8px; }
+  .pr-file { margin-top: 8px; }
+  .pr-file .f { font-family: var(--mono); color: var(--warn); font-weight: 600; }
+  ul.tight { margin: 4px 0; padding-left: 18px; }
+  .history { max-height: 180px; overflow: auto; }
+  .history div { font-size: 12.5px; padding: 2px 0; color: var(--muted); }
+  .history .id { font-family: var(--mono); color: var(--text); }
+</style>
+</head>
+<body>
+<header>
+  <h1>DejaVu</h1>
+  <span class="tag">Never fight the same incident twice.</span>
+  <span class="spacer"></span>
+  <span id="chip-mem" class="chip">memory: …</span>
+  <span id="chip-llm" class="chip">llm: …</span>
+  <label class="toggle" title="Same alert with and without long-term memory">
+    <span>Memory</span>
+    <input type="checkbox" id="mem-toggle" checked autocomplete="off">
+    <span class="track"></span>
+    <b id="mem-label">ON</b>
+  </label>
+  <button id="reset" class="sm">Reset</button>
+</header>
+
+<main>
+  <div id="warnings"></div>
+
+  <div>
+    <section class="card">
+      <h2>Trigger incident (simulated telemetry)</h2>
+      <div class="triggers">
+        {% for key, label in scenarios.items() %}
+        <button class="{{ 'primary' if key != 'normal' else '' }}" data-scenario="{{ key }}">{{ label }}</button>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card" id="incident-card">
+      <h2>Incident</h2>
+      <div id="incident" class="empty">Trigger a scenario to open an incident.</div>
+    </section>
+
+    <section class="card">
+      <h2>Incident log</h2>
+      <div id="history" class="history"></div>
+    </section>
+  </div>
+
+  <div>
+    <section class="card">
+      <h2>Memory panel: what influenced this answer</h2>
+      <div id="memory" class="empty">No investigation yet.</div>
+    </section>
+
+    <section class="card">
+      <h2>Insights (computed from incident data)</h2>
+      <div id="insights" class="empty">Loading…</div>
+      <div class="inline"><button id="reflect-btn" class="sm">Ask Hindsight reflect</button><span id="reflect-status" class="meta"></span></div>
+      <div id="reflect"></div>
+    </section>
+
+    <section class="card">
+      <h2>PR check</h2>
+      <textarea id="pr-files" rows="3" aria-label="Changed files, one per line">auth/session.py
+docs/onboarding.md</textarea>
+      <div class="inline"><button id="pr-btn" class="sm">Check changed files</button></div>
+      <div id="pr-result"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let current = null;   // {incident, analysis, alert}
+
+function warn(list) {
+  const box = $("#warnings");
+  box.innerHTML = (list || []).filter(Boolean).map((w) => `<div class="warning">⚠ ${esc(w)}</div>`).join("");
+}
+
+async function api(path, body) {
+  const opts = body === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)};
+  let res;
+  try { res = await fetch(path, opts); } catch (e) { warn([`Network error: ${e.message}`]); throw e; }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { warn([data.error || `HTTP ${res.status}`]); throw new Error(data.error || res.status); }
+  return data;
+}
+
+function rate(a) {
+  if (a.tried === 0 || a.rate === null || a.rate === undefined) return "no history";
+  return `worked ${a.worked}/${a.tried}`;
+}
+
+function verdictFor(inc, action) {
+  const v = (inc.actions || []).find((x) => x.action === action);
+  if (!v) return "";
+  return `<span class="verdict ${v.worked ? "w" : "f"}">${v.worked ? "✓ marked worked" : "✗ marked failed"}</span>`;
+}
+
+function actionRow(inc, a, kind) {
+  const ids = kind === "avoid" ? a.failed_in : a.worked_in;
+  const stat = kind === "avoid" ? `failed ${a.tried}/${a.tried}` : rate(a);
+  const open = inc.status === "open";
+  return `<div class="row">
+    <span class="name">${esc(a.action)}</span>
+    <span class="stat">${esc(stat)}</span>
+    ${ids && ids.length ? `<span class="ids">${ids.map(esc).join(", ")}</span>` : ""}
+    ${verdictFor(inc, a.action)}
+    <span class="btns">${open ? `
+      <button class="sm ok" data-act="${esc(a.action)}" data-worked="1">Worked</button>
+      <button class="sm bad" data-act="${esc(a.action)}" data-worked="0">Failed</button>` : ""}</span>
+  </div>`;
+}
+
+function renderIncident() {
+  const el = $("#incident");
+  if (!current) { el.className = "empty"; el.textContent = "Trigger a scenario to open an incident."; return; }
+  const {incident: inc, analysis: an, alert} = current;
+  el.className = "";
+  const badge = !an.use_memory ? `<span class="badge none">Memory OFF</span>`
+    : an.deja_vu ? `<span class="badge deja">Déjà vu detected</span>` : `<span class="badge none">No similar incidents</span>`;
+  const shown = new Set([...an.do_first, ...an.avoid].map((a) => a.action));
+  const extra = (inc.actions || []).filter((a) => !shown.has(a.action));
+  el.innerHTML = `
+    <div class="inc-head">
+      <span class="mono">${esc(inc.id)}</span><span class="sev">${esc(inc.severity)}</span>
+      <span class="title">${esc(inc.title)}</span>${badge}
+    </div>
+    <div class="signal mono">${esc(inc.signal)}</div>
+    <p class="meta">service <b>${esc(inc.service)}</b> · rule <b>${esc(alert ? alert.rule : inc.rule)}</b>
+      ${inc.asn ? ` · ASN <b>${esc(inc.asn)}</b>` : ""}
+      ${inc.files && inc.files.length ? ` · files <span class="mono">${inc.files.map(esc).join(", ")}</span>` : ""}
+      ${inc.prior_change ? ` · recent change <b>${esc(inc.prior_change.summary)}</b> (${esc(inc.prior_change.hours_before)}h ago)` : ""}
+      · status <b>${esc(inc.status)}</b></p>
+    <div class="narrative">${esc(an.narrative)}<small>${an.narrative_source === "llm" ? "Narrative by Groq, checked to cite only matched incidents" : "Template narrative"}</small></div>
+    <h3 class="do">${an.use_memory && an.deja_vu ? "Do first (ranked by track record)" : "Suggested first steps (generic)"}</h3>
+    ${an.do_first.map((a) => actionRow(inc, a, "do")).join("") || `<div class="empty">No action with a success rate of at least 50%.</div>`}
+    ${an.avoid.length ? `<h3 class="avoid">We tried this before and it failed</h3>${an.avoid.map((a) => actionRow(inc, a, "avoid")).join("")}` : ""}
+    ${extra.length ? `<h3>Other recorded actions</h3>${extra.map((a) => `<div class="row"><span class="name">${esc(a.action)}</span>${verdictFor(inc, a.action)}</div>`).join("")}` : ""}
+    ${inc.status === "open" ? `
+      <div class="inline"><input type="text" id="custom-action" placeholder="Another action you took (e.g. Roll back last deploy)">
+        <button class="sm ok" id="custom-ok">Worked</button><button class="sm bad" id="custom-bad">Failed</button></div>
+      <h3>Resolve</h3>
+      <textarea id="root-cause" rows="2" placeholder="Root cause (retained with the postmortem)"></textarea>
+      <div class="inline"><button class="primary" id="resolve-btn">Resolve and retain postmortem</button></div>`
+    : `<p class="meta">Resolved. Root cause: ${esc(inc.root_cause || "(none given)")}</p>`}
+  `;
+  el.querySelectorAll("button[data-act]").forEach((b) => b.onclick = () => outcome(b.dataset.act, b.dataset.worked === "1"));
+  const c = $("#custom-action");
+  if (c) {
+    $("#custom-ok").onclick = () => c.value.trim() && outcome(c.value.trim(), true);
+    $("#custom-bad").onclick = () => c.value.trim() && outcome(c.value.trim(), false);
+    $("#resolve-btn").onclick = resolve;
+  }
+}
+
+function renderMemory() {
+  const el = $("#memory");
+  if (!current) return;
+  const an = current.analysis;
+  if (!an.use_memory) { el.className = "empty"; el.innerHTML = "Memory is OFF. No past incidents were consulted, so the advice is generic."; return; }
+  el.className = "";
+  const src = (an.memory_backend || "").startsWith("hindsight") ? "Hindsight recall" : `Memory recall (${esc(an.memory_backend || "none")})`;
+  const recalled = an.recalled_ids && an.recalled_ids.length
+    ? `<p class="meta">${src} returned: <span class="mono">${an.recalled_ids.map(esc).join(", ")}</span></p>`
+    : `<p class="meta">${src} returned no incident ids.</p>`;
+  if (!an.matches.length) { el.innerHTML = recalled + `<div class="empty">No past incident scored high enough to count as similar.</div>`; return; }
+  el.innerHTML = recalled + an.matches.map((m) => `
+    <div class="mem-item">
+      <div class="top"><span class="id">${esc(m.id)}</span><span>${esc(m.title)}</span><span class="score">score ${m.score}</span></div>
+      <div class="meta">${esc(m.opened_at.replace("T", " "))} · ${esc(m.type)} · ${esc(m.service)}</div>
+      <div class="why">${m.why.map((w) => `<span>${esc(w)}</span>`).join("")}</div>
+      <div class="acts">${m.actions.map((a) => `<span class="${a.worked ? "w" : "f"}">${a.worked ? "✓" : "✗"} ${esc(a.action)}</span>`).join(" · ")}</div>
+    </div>`).join("");
+}
+
+async function trigger(scenario) {
+  const btns = document.querySelectorAll("button[data-scenario]");
+  btns.forEach((b) => b.disabled = true);
+  warn([]);
+  try {
+    const data = await api("/api/trigger", {scenario, use_memory: $("#mem-toggle").checked});
+    if (!data.detected) {
+      current = null; renderIncident();
+      $("#incident").innerHTML = `<span class="empty">${esc(data.message)}</span>`;
+    } else {
+      current = {incident: data.incident, analysis: data.analysis, alert: data.alert};
+      renderIncident(); renderMemory();
+    }
+    warn(data.warnings);
+    loadState();
+  } finally { btns.forEach((b) => b.disabled = false); }
+}
+
+async function outcome(action, worked) {
+  const id = current.incident.id;
+  const data = await api(`/api/incidents/${id}/outcome`, {action, worked, note: ""});
+  current.incident = data.incident;
+  renderIncident();
+  warn(data.warnings);
+  if (data.retained) flash(`Retained in memory: "${action}" ${worked ? "worked" : "failed"} for ${id}.`);
+}
+
+async function resolve() {
+  const id = current.incident.id;
+  const data = await api(`/api/incidents/${id}/resolve`, {root_cause: $("#root-cause").value});
+  current.incident = data.incident;
+  renderIncident(); warn(data.warnings);
+  if (data.retained) flash(`Postmortem for ${id} retained in memory. The next similar incident will use it.`);
+  loadState(); loadInsights(false);
+}
+
+function flash(msg) {
+  const d = document.createElement("div");
+  d.className = "warning"; d.style.cssText = "background:#132a1b;border-color:#2a5d36;color:#7ee2a0";
+  d.textContent = "✓ " + msg;
+  $("#warnings").appendChild(d);
+  setTimeout(() => d.remove(), 4000);
+}
+
+async function loadState() {
+  const s = await api("/api/state");
+  const mem = $("#chip-mem");
+  mem.textContent = `memory: ${s.memory_backend}${s.bank ? " · " + s.bank : ""}`;
+  mem.className = "chip " + (s.memory_backend === "hindsight" ? "on" : "off");
+  const llm = $("#chip-llm");
+  llm.textContent = s.llm ? "llm: groq" : "llm: template";
+  llm.className = "chip " + (s.llm ? "on" : "off");
+  if (s.startup_warnings && s.startup_warnings.length) warn(s.startup_warnings);
+  $("#history").innerHTML = s.incidents.slice().reverse().map((i) =>
+    `<div><span class="id">${esc(i.id)}</span> ${esc(i.opened_at.replace("T", " "))} · ${esc(i.type)} · ${esc(i.status)} · ${esc(i.title)}</div>`).join("");
+  renderComputed(s.insights);
+}
+
+function renderComputed(c) {
+  const fails = c.always_fail.map((a) => `<li><b>${esc(a.action)}</b> failed ${a.tried}/${a.tried} <span class="mono">(${a.failed_in.map(esc).join(", ")})</span></li>`).join("");
+  const rel = c.reliable.map((a) => `<li><b>${esc(a.action)}</b> worked ${a.worked}/${a.tried}</li>`).join("");
+  const asns = c.recurring_asns.map((a) => `<li><b>${esc(a.asn)}</b>: ${a.count} incidents <span class="mono">(${a.ids.map(esc).join(", ")})</span></li>`).join("");
+  $("#insights").className = "";
+  $("#insights").innerHTML = `
+    <div class="ins"><span class="big">${c.tuesday_evening.count}/${c.tuesday_evening.total}</span>${esc(c.tuesday_evening.text)}
+      <div class="mono meta">${c.tuesday_evening.ids.map(esc).join(", ")}</div></div>
+    <div class="ins"><span class="big">${c.auth_precursor.count}/${c.auth_precursor.total}</span>${esc(c.auth_precursor.text)}
+      <div class="mono meta">${c.auth_precursor.ids.map(esc).join(", ")}</div></div>
+    <div class="ins">Fixes that always fail:<ul class="tight">${fails || "<li>none</li>"}</ul></div>
+    <div class="ins">Fixes that reliably work:<ul class="tight">${rel || "<li>none</li>"}</ul></div>
+    <div class="ins">Recurring attacker ASNs:<ul class="tight">${asns || "<li>none</li>"}</ul></div>`;
+}
+
+async function loadInsights(withReflect) {
+  if (!withReflect) return;
+  $("#reflect-status").textContent = "asking memory…";
+  $("#reflect-btn").disabled = true;
+  try {
+    const d = await api("/api/insights");
+    renderComputed(d.computed);
+    if (d.reflect && d.reflect.text) {
+      $("#reflect").innerHTML = `<div class="reflect">${esc(d.reflect.text)}</div>`;
+      $("#reflect-status").textContent = `reflect via ${d.reflect.backend}`;
+    } else {
+      $("#reflect").innerHTML = "";
+      $("#reflect-status").textContent = "";
+      warn(d.warnings);
+    }
+  } finally { $("#reflect-btn").disabled = false; }
+}
+
+async function prCheck() {
+  const files = $("#pr-files").value.split(/\n|,/).map((s) => s.trim()).filter(Boolean);
+  const d = await api("/api/pr-check", {files});
+  const el = $("#pr-result");
+  if (!d.findings.length) { el.innerHTML = `<p class="meta">No changed file has incident history.</p>`; return; }
+  el.innerHTML = d.findings.map((f) => {
+    const parts = [f.outages ? `${f.outages} outage${f.outages > 1 ? "s" : ""}` : "", f.security ? `${f.security} security incident${f.security > 1 ? "s" : ""}` : ""].filter(Boolean).join(" and ");
+    return `<div class="pr-file">⚠ <span class="f">${esc(f.file)}</span> was involved in ${esc(parts)}
+      <ul class="tight">${f.incidents.map((h) => `<li><span class="mono">${esc(h.id)}</span> ${esc(h.opened_at.slice(0, 10))}: ${esc(h.title)}</li>`).join("")}</ul></div>`;
+  }).join("") + (d.pattern ? `<p class="meta"><b>Pattern:</b> ${esc(d.pattern.text)}</p>` : "");
+}
+
+document.querySelectorAll("button[data-scenario]").forEach((b) => b.onclick = () => trigger(b.dataset.scenario));
+$("#mem-toggle").onchange = (e) => { $("#mem-label").textContent = e.target.checked ? "ON" : "OFF"; };
+$("#reflect-btn").onclick = () => loadInsights(true);
+$("#pr-btn").onclick = prCheck;
+$("#reset").onclick = async () => {
+  const d = await api("/api/reset", {});
+  current = null; renderIncident(); $("#memory").className = "empty"; $("#memory").textContent = "No investigation yet.";
+  $("#reflect").innerHTML = ""; warn(d.warnings); loadState();
+};
+$("#mem-label").textContent = $("#mem-toggle").checked ? "ON" : "OFF";
+loadState().catch(() => {});
+</script>
+</body>
+</html>
