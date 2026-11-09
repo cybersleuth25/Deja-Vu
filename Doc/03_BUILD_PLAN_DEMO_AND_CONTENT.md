@@ -39,7 +39,7 @@ Rehearse twice. Pre-seed memory and keep a recorded backup of step 3 in case the
 **Per team:** 1 YouTube video (2-5 min, 1080p) with a thumbnail.
 
 **Hard rules (disqualification):**
-- The word "hackathon" must not appear anywhere in titles, bodies or hashtags. Avoid student-related tags too.
+- Never name the event or competition anywhere in titles, bodies or hashtags. Avoid student-related tags too.
 - Articles need links to: https://github.com/vectorize-io/hindsight, https://hindsight.vectorize.io/, https://vectorize.io/what-is-agent-memory
 - Article needs at least: one real code snippet, one before/after example, one honest limitation, screenshots.
 - LinkedIn post: bold hook (no hashtags or links in first 2 lines), 3-7 takeaways with one before/after, your project repo link in the post, hashtags on the last line only (#AIAgents #AgentMemory #Hindsight #LLM). First comment: article URL, then a comment linking the Hindsight repo.
