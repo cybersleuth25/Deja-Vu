@@ -7,6 +7,7 @@ Memory or LLM failures never break a request: the response carries a `warnings` 
 from __future__ import annotations
 
 import os
+import socket
 import time
 from datetime import datetime
 
@@ -28,6 +29,24 @@ from memory_backend import MockMemory, get_memory
 from store import Store
 
 REFLECT_TTL = 120  # seconds; reflect is an LLM call on the Hindsight side
+MAX_BODY = 64 * 1024  # bytes; the largest real request is a pasted list of changed files
+
+
+def port_is_free(port: int, host: str = "127.0.0.1") -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind((host, port))
+            return True
+        except OSError:
+            return False
+
+
+def pick_port(env: dict = os.environ) -> int:
+    """An explicit PORT is used as given. Otherwise 5000, or the next free port up to 5010
+    (5000 is often taken, for example by AirPlay Receiver on macOS)."""
+    if env.get("PORT"):
+        return int(env["PORT"])
+    return next((p for p in range(5000, 5011) if port_is_free(p)), 5000)
 
 
 def _summary(inc: dict) -> dict:
@@ -36,6 +55,7 @@ def _summary(inc: dict) -> dict:
 
 def create_app(store: Store | None = None, memory=None, llm="auto") -> Flask:
     app = Flask(__name__)
+    app.config["MAX_CONTENT_LENGTH"] = MAX_BODY  # larger request bodies get 413 before parsing
     store = store or Store()
     startup_warnings: list[str] = []
     if memory is None:
@@ -182,13 +202,8 @@ def create_app(store: Store | None = None, memory=None, llm="auto") -> Flask:
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app = create_app()
-    try:
-        app.run(host="127.0.0.1", port=port, debug=False)
-    except OSError as err:
-        if port == 5000 and "Address already in use" in str(err):
-            print("Port 5000 in use (macOS AirPlay/ControlCenter); falling back to http://127.0.0.1:5001")
-            app.run(host="127.0.0.1", port=5001, debug=False)
-        else:
-            raise
+    # Werkzeug exits on a busy port instead of raising, so the free port is chosen before run().
+    port = pick_port()
+    if port != 5000 and not os.environ.get("PORT"):
+        print(f"Port 5000 is in use; serving on http://127.0.0.1:{port}")
+    create_app().run(host="127.0.0.1", port=port, debug=False)
