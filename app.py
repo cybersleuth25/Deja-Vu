@@ -182,4 +182,13 @@ def create_app(store: Store | None = None, memory=None, llm="auto") -> Flask:
 
 
 if __name__ == "__main__":
-    create_app().run(host="127.0.0.1", port=int(os.environ.get("PORT", 5000)), debug=False)
+    port = int(os.environ.get("PORT", 5000))
+    app = create_app()
+    try:
+        app.run(host="127.0.0.1", port=port, debug=False)
+    except OSError as err:
+        if port == 5000 and "Address already in use" in str(err):
+            print("Port 5000 in use (macOS AirPlay/ControlCenter); falling back to http://127.0.0.1:5001")
+            app.run(host="127.0.0.1", port=5001, debug=False)
+        else:
+            raise

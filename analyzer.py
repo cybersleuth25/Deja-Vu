@@ -167,7 +167,8 @@ def llm_narrative(llm, alert: dict, matches: list[dict], ranked: dict, hint: str
             + (f"\nRecent change: {hint}" if hint else "")
             + "\n\nTell the on-call engineer what to do first and what not to repeat, citing incident ids "
               "in parentheses. Use only the ids and numbers above.")
-    return llm.complete(SYSTEM, user)
+    text = llm.complete(SYSTEM, user)
+    return re.sub(r"\bINC[\u2010-\u2015\u2212](\d{4})\b", r"INC-\1", text)
 
 
 def investigate(alert: dict, incidents: list[dict], memory: Memory | None, use_memory: bool = True,
