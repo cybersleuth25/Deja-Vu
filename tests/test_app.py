@@ -134,3 +134,34 @@ def test_resolving_twice_is_refused(client, store):
     r = client.post(f"/api/incidents/{iid}/resolve", json={"root_cause": "changed my mind"})
     assert r.status_code == 409 and store.get(iid)["root_cause"] == "scanner"
     assert client.post(f"/api/incidents/{iid}/outcome", json={"action": "x", "worked": True}).status_code == 409
+
+
+def test_oversized_body_is_refused(client, store):
+    before = store.all()
+    big = {"files": ["a/" + "x" * 100] * 1000}  # ~100 KB, over the 64 KB cap
+    assert client.post("/api/pr-check", json=big).status_code == 413
+    assert client.post("/api/incidents/INC-0001/resolve", json={"root_cause": "x" * 70000}).status_code == 413
+    assert store.all() == before
+
+
+def test_pick_port_skips_a_busy_port():
+    import socket
+    from app import pick_port, port_is_free
+    assert pick_port({"PORT": "5123"}) == 5123
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        s.listen()
+        assert port_is_free(s.getsockname()[1]) is False
+
+
+def test_store_reads_wait_for_writers(store):
+    import threading
+    got = []
+    store._lock.acquire()
+    t = threading.Thread(target=lambda: got.append(store.get("INC-0001")))
+    t.start()
+    t.join(0.2)
+    assert t.is_alive() and not got  # blocked while a write holds the lock
+    store._lock.release()
+    t.join(2)
+    assert got and got[0]["id"] == "INC-0001"

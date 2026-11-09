@@ -43,12 +43,22 @@ def gh(method: str, url: str, token: str, body: dict | None = None):
         return json.loads(resp.read() or b"null")
 
 
+BOT_LOGIN = os.environ.get("DEJAVU_BOT_LOGIN", "github-actions[bot]")
+
+
+def is_ours(comment: dict, bot_login: str = BOT_LOGIN) -> bool:
+    """Anyone can paste the marker into a comment, so it only counts when the bot wrote it.
+    Otherwise a human comment carrying the marker would be overwritten, or would hide the warning."""
+    return ((comment.get("user") or {}).get("login") == bot_login
+            and (comment.get("body") or "").startswith(prcheck.MARKER))
+
+
 def find_existing(repo: str, number: int, token: str) -> dict | None:
     page = 1
     while True:
         rows = gh("GET", f"{API}/repos/{repo}/issues/{number}/comments?per_page=100&page={page}", token)
         for c in rows:
-            if prcheck.MARKER in (c.get("body") or ""):
+            if is_ours(c):
                 return c
         if len(rows) < 100:
             return None

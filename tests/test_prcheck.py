@@ -47,7 +47,7 @@ class FakeGitHub(BaseHTTPRequestHandler):
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         self.calls.append(("POST", self.path))
-        c = {"id": 100 + len(self.comments), "body": body["body"]}
+        c = {"id": 100 + len(self.comments), "body": body["body"], "user": {"login": "github-actions[bot]"}}
         self.comments.append(c)
         self._send(201, c)
 
@@ -94,3 +94,27 @@ def test_pr_comment_skips_when_nothing_to_say(monkeypatch):
         assert [m for m, _ in FakeGitHub.calls] == ["GET"]
     finally:
         srv.shutdown()
+
+
+def test_marker_pasted_by_a_human_is_not_treated_as_the_bot_comment(monkeypatch):
+    spoof = {"id": 1, "body": prcheck.MARKER + " nothing to see here", "user": {"login": "someone"}}
+    FakeGitHub.comments, FakeGitHub.calls = [spoof], []
+    srv = HTTPServer(("127.0.0.1", 0), FakeGitHub)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        monkeypatch.setattr(pr_comment, "API", f"http://127.0.0.1:{srv.server_port}")
+        monkeypatch.setenv("GITHUB_TOKEN", "t"); monkeypatch.setenv("GITHUB_REPOSITORY", "a/b"); monkeypatch.setenv("PR_NUMBER", "3")
+        assert pr_comment.main(["auth/session.py"]) == 0
+        assert not any(m == "PATCH" for m, _ in FakeGitHub.calls)  # the human's comment is untouched
+        assert ("POST", "/repos/a/b/issues/3/comments") in FakeGitHub.calls  # the real warning is posted
+        assert FakeGitHub.comments[0] == spoof
+    finally:
+        srv.shutdown()
+
+
+def test_is_ours_needs_bot_author_and_leading_marker():
+    bot = {"login": "github-actions[bot]"}
+    assert pr_comment.is_ours({"user": bot, "body": prcheck.MARKER + "x"})
+    assert not pr_comment.is_ours({"user": {"login": "mallory"}, "body": prcheck.MARKER + "x"})
+    assert not pr_comment.is_ours({"user": bot, "body": "quoted: " + prcheck.MARKER})
+    assert not pr_comment.is_ours({"body": prcheck.MARKER})

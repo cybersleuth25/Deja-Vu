@@ -51,16 +51,21 @@ class Store:
             self._save()
 
     # ---- queries ----
+    # Reads take the lock too: copying while another request mutates the list could see a
+    # half-applied change.
     def all(self) -> list[dict]:
-        return copy.deepcopy(self.incidents)
+        with self._lock:
+            return copy.deepcopy(self.incidents)
 
     def resolved(self) -> list[dict]:
-        return [copy.deepcopy(i) for i in self.incidents if i.get("status") == "resolved"]
+        with self._lock:
+            return [copy.deepcopy(i) for i in self.incidents if i.get("status") == "resolved"]
 
     def get(self, iid: str) -> dict | None:
-        for i in self.incidents:
-            if i["id"] == iid:
-                return copy.deepcopy(i)
+        with self._lock:
+            for i in self.incidents:
+                if i["id"] == iid:
+                    return copy.deepcopy(i)
         return None
 
     # ---- mutations ----
